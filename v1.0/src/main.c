@@ -7,7 +7,7 @@ void e_mov(VM *vm, Opcode op, Args a1, Args a2)
     return;
 }
 
-void execinstr(VM *vm, Instruction i)
+void execinstr(VM *vm, program *p)
 {
     Args a1, a2;
 
@@ -15,7 +15,7 @@ void execinstr(VM *vm, Instruction i)
 
     a1 = a2 = 0;
 
-    size = map(i.o);
+    size = map(*p);
 
     switch (size)
     {
@@ -23,12 +23,15 @@ void execinstr(VM *vm, Instruction i)
         break;
 
     case 2:
-        a1 = i.a[0];
+        a1 = *(p + 1);
+        printf("DEBUG: a1 = 0x%02X", a1);
         break;
 
     case 3:
-        a1 = i.a[0];
-        a2 = i.a[1];
+
+        a1 = *(p + 1);
+        a2 = *(p + 3);
+        printf("DEBUG: a1 = 0x%02X, a2 = 0x%02X\n", a1, a2);
 
         break;
 
@@ -37,16 +40,17 @@ void execinstr(VM *vm, Instruction i)
         break;
     }
 
-    switch (i.o)
+    switch (*p)
     {
     case mov:
-        e_mov(vm, i.o, a1, a2);
+        e_mov(vm, *p, a1, a2);
         break;
 
     case nop:
         break;
 
     case hlt:
+
         Error(vm, SysHlt);
         break;
 
@@ -59,16 +63,16 @@ void execinstr(VM *vm, Instruction i)
 
 void execute(VM *vm)
 {
-    int32 breakaddr;
+    int16 breakaddr;
     program *pp;
     int16 size;
 
-    Instruction ip; // note that thi is not the register ip
+    Instruction *ip; // note that thi is not the register ip
 
     assert(vm && *vm->m);
     size = 0;
     // breakaddr = (int32)(vm->m + vm->b);
-    breakaddr = (int32)vm->m + (int32)vm->b;
+    breakaddr = (int16)(vm->m + vm->b);
 
     pp = (program *)vm->m;
 
@@ -81,26 +85,22 @@ void execute(VM *vm)
     0x03  ; hlt
     */
 
-    do
+    while (*pp != (Opcode)hlt)
     {
-        printf("---\n");
-        printf(" pp  = %p\n", (void *)pp);
-        printf(" brk = 0x%08X (%p)\n", (unsigned int)breakaddr, (void *)breakaddr);
-        fflush(stdout);
 
         vm $ip += size;
 
         pp += size;
-        ip.o = *pp;
+        ip->o = *pp;
 
-        if ((int32)pp > breakaddr)
+        if ((int16)pp > breakaddr)
         {
             segfault(vm);
         }
-        size = map(ip.o);
-        execinstr(vm, ip);
+        size = map(ip->o);
 
-    } while (*pp != (Opcode)hlt);
+        execinstr(vm, pp);
+    }
 
     return;
 }
@@ -110,8 +110,6 @@ void Error(VM *vm, Errorcode e)
 
     int8 exitcode;
     exitcode = -1;
-    if (vm)
-        free(vm);
 
     switch (e)
     {
@@ -122,12 +120,16 @@ void Error(VM *vm, Errorcode e)
     case SysHlt:
 
         fprintf(stderr, "%s\n", "system halted");
+        printf("ax = %0.04hx\n", $i vm $ax);
         exitcode = 0;
         break;
 
     default:
         break;
     }
+
+    if (vm)
+        free(vm);
 
     exit($i exitcode);
 }

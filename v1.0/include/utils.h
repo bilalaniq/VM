@@ -167,7 +167,7 @@ int8 map(Opcode);
 
 VM *VirtualMachine(void);
 
-void execinstr(VM *, Instruction);
+void execinstr(VM *, program *);
 
 void execute(VM *);
 
