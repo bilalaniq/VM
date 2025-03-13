@@ -66,9 +66,11 @@ void execute(VM *vm)
     Instruction ip; // note that thi is not the register ip
 
     assert(vm && *vm->m);
+    size = 0;
+    // breakaddr = (int32)(vm->m + vm->b);
+    breakaddr = (int32)vm->m + (int32)vm->b;
 
-    breakaddr = ((int32)vm->m + vm->b);
-    pp = (program *)&vm->m;
+    pp = (program *)vm->m;
 
     // in our example program we have
     /*
@@ -81,26 +83,26 @@ void execute(VM *vm)
 
     do
     {
-        printf(" ");
-        printf(" pp = %p\n", pp);
-        printf("brk = 0x%x\n", $i breakaddr);
+        printf("---\n");
+        printf(" pp  = %p\n", (void *)pp);
+        printf(" brk = 0x%08X (%p)\n", (unsigned int)breakaddr, (void *)breakaddr);
         fflush(stdout);
 
-        ip.o = *pp;
+        vm $ip += size;
 
-        size = map(ip.o);
+        pp += size;
+        ip.o = *pp;
 
         if ((int32)pp > breakaddr)
         {
             segfault(vm);
         }
+        size = map(ip.o);
         execinstr(vm, ip);
 
-        vm $ip += size;
-
-        pp += size;
-
     } while (*pp != (Opcode)hlt);
+
+    return;
 }
 
 void Error(VM *vm, Errorcode e)
@@ -162,11 +164,13 @@ int8 map(Opcode o)
         if (p->o == o)
         {
             ret = p->size;
-            break;
+            // printf("Mapped Opcode: 0x%02X -> Size: %d\n", o, ret);
+            return ret;
         }
     }
 
-    return ret;
+    // printf("Unknown Opcode: 0x%02X\n", o); // Debugging print
+    return 0; // Invalid opcode should return 0
 }
 
 #if prodcode // production code
@@ -215,7 +219,7 @@ program *exampleprog(VM *vm)
 
     p++;
 
-    i2->o = hlt;
+    i3->o = hlt;
     memcpy($1 p, $1 i3, 1);
 
     vm->b = S1 + SA1 + S2 + S3;
@@ -264,7 +268,7 @@ int main(int, char **)
     printf("prog = %p\n", prog);
 
     execute(vm);
-    printf("ax = %04hx\n", $i vm $ax);
+    // printf("ax = %04hx\n", $i vm $ax);
 
-    Printhex($1 prog, (map(mov) + map(nop)), ' ');
+    Printhex($1 prog, (map(mov) + map(nop) + map(hlt)), ' ');
 }

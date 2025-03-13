@@ -4,6 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <assert.h>
 #include <error.h>
 #include <stdbool.h>
@@ -132,7 +133,7 @@ struct S_vm // virtual matchiene struct
 {
     CPU c;
     Memory m;
-    int16 b; // *break line
+    int16 b; // break line
 };
 
 typedef struct S_vm VM;
@@ -166,7 +167,7 @@ int8 map(Opcode);
 
 VM *VirtualMachine(void);
 
-void execinstr(VM *, Instruction*);
+void execinstr(VM *, Instruction);
 
 void execute(VM *);
 
