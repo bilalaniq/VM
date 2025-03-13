@@ -15,7 +15,12 @@ errors
 
 */
 
-#define ErrMem 0x01
+#define NoErr 0x00
+#define SysHlt 0x01
+#define ErrMem 0x02
+#define ErrSeqv 0x04
+
+// #define NoArgs {0x00, 0x00}
 
 /* Limtations of this vm
 
@@ -45,6 +50,15 @@ typedef unsigned long long int int64; // 64 bit
 #define $c (char *) // Cast to char pointer
 #define $i (int)    // Cast to int
 
+#define segfault(x) Error(x, ErrSeqv)
+
+#define $ax ->c.r.ax
+#define $bx ->c.r.bx
+#define $cx ->c.r.cx
+#define $dx ->c.r.dx
+#define $sp ->c.r.sp
+#define $ip ->c.r.ip
+
 typedef unsigned short int Reg; // because we are dealing with 16 bit regiters
 
 struct S_registers
@@ -65,9 +79,11 @@ struct S_cpu
 
 typedef struct S_cpu CPU;
 
-typedef int8 STACK[((unsigned int)(-1))]; // stack will be an array of 8 bits
+typedef unsigned char Errorcode;
+
+typedef int8 Memory[((int16)(-1))]; // memory will be an array of 8 bits
 // In an unsigned 16-bit system, -1 would be 0xFFFF (65,535).
-// Safer alternative: typedef int8 STACK[65536];
+// Safer alternative: typedef int8 Memory[65536];
 
 // note : When you cast -1 to an unsigned int, it results in the maximum possible value for that type.
 
@@ -82,7 +98,8 @@ mov ax 0x05    //  (0x01 OR 0x02)
 enum e_Opcode
 {
     mov = 0x01,
-    nop = 0x02 // NOP (No Operation) is an assembly instruction that does nothing except consume a CPU cycle.
+    nop = 0x02, // NOP (No Operation) is an assembly instruction that does nothing except consume a CPU cycle.
+    hlt = 0x03
 };
 
 typedef enum e_Opcode Opcode;
@@ -96,7 +113,7 @@ struct S_instrmap // The IM (instruction map) structure associates opcodes with 
 
 typedef struct S_instrmap IM;
 
-typedef int8 Args;
+typedef int16 Args;
 
 struct S_Instruction
 {
@@ -106,24 +123,53 @@ struct S_Instruction
 
 typedef struct S_Instruction Instruction;
 
-typedef Instruction program;
+typedef int8 program;
+
+// while the program at the end will be the instruction but we will consider it an as an byte of string so the pointer
+// to an program will be an pointer to an string of bytes so we can later on put out instruction in the program manually
 
 struct S_vm // virtual matchiene struct
 {
     CPU c;
-    STACK s;
-    program *p;
+    Memory m;
+    int16 b; // *break line
 };
 
 typedef struct S_vm VM;
 
-static IM instrmap[] = { // lookup table (an array of IM structures) that maps opcodes to their instruction sizes.
+typedef Memory *Stack;
+
+static IM instrmap[] = {
+    // lookup table (an array of IM structures) that maps opcodes to their instruction sizes.
 
     {mov, 0x03},
-    {nop, 0x01}
+    {nop, 0x01},
+    {hlt, 0x01},
 
 };
 
-VM *VirtualMachine(program * , int16);
+#define IM_size (sizeof(instrmap) / sizeof(IM))
+
+#ifndef prodcode
+#define prodcode 1
+#endif
+
+#if prodcode
+program *exampleprog(VM *);
+
+void Printhex(int8 *, int16, int8);
+#endif
+
+void e_mov(VM *, Opcode, Args, Args);
+
+int8 map(Opcode);
+
+VM *VirtualMachine(void);
+
+void execinstr(VM *, Instruction*);
+
+void execute(VM *);
+
+void Error(VM *, Errorcode);
 
 int main(int, char **);
